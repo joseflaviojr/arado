@@ -1,0 +1,120 @@
+//------------------------------------------------------
+
+plugins {
+    id 'java-library'
+    id 'jvm-test-suite'
+    id 'eclipse'
+    id 'idea'
+}
+
+//------------------------------------------------------
+
+String projectName = 'Arado'
+String projectDescription = 'Utility that makes it easy to save the contents of the clipboard to files.'
+
+group = 'com.joseflavio'
+version = '1.0.0'
+
+//------------------------------------------------------
+
+JavaVersion javaVersion = JavaVersion.VERSION_17
+int javaVersionMajorInt = javaVersion.majorVersion.toInteger()
+String charsetEncoding = 'UTF-8'
+
+//------------------------------------------------------
+
+repositories {
+    mavenCentral()
+}
+
+//------------------------------------------------------
+
+dependencies {
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.3'
+}
+
+//------------------------------------------------------
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = charsetEncoding
+}
+
+//------------------------------------------------------
+
+java {
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+    withSourcesJar()
+    withJavadocJar()
+}
+
+//------------------------------------------------------
+
+testing {
+    suites {
+        test {
+            useJUnitJupiter()
+        }
+    }
+}
+
+//------------------------------------------------------
+
+jar {
+    manifest {
+        attributes 'Implementation-Title': projectName,
+                'Implementation-Version': archiveVersion,
+                'Main-Class': 'com.joseflavio.arado.Arado',
+                'Class-Path': configurations.runtimeClasspath.collect { "deps/${it.getName()}" }.join(' ')
+    }
+    finalizedBy 'copyDeps'
+}
+
+//------------------------------------------------------
+
+tasks.register('copyDeps', Copy) {
+    dependsOn 'jar'
+    from configurations.runtimeClasspath
+    into "${layout.buildDirectory.asFile.get()}/libs/deps"
+    duplicatesStrategy = DuplicatesStrategy.WARN
+}
+
+//------------------------------------------------------
+
+eclipse {
+    project {
+        name = rootProject.name
+        comment = projectDescription
+    }
+    jdt {
+        sourceCompatibility = javaVersionMajorInt
+        targetCompatibility = javaVersionMajorInt
+    }
+}
+
+eclipseJdt {
+    doLast {
+        file('.settings/org.eclipse.core.resources.prefs').text =
+                'eclipse.preferences.version=1\nencoding/<project>=' + charsetEncoding
+    }
+}
+
+//------------------------------------------------------
+
+idea {
+    project {
+        languageLevel = new org.gradle.plugins.ide.idea.model.IdeaLanguageLevel(javaVersionMajorInt)
+        jdkName = '' + javaVersionMajorInt
+        vcs = 'Git'
+        ipr {
+            withXml {
+                def projeto = it.asNode()
+                def encoding = projeto.component.find { it.@name == 'Encoding' }
+                encoding.appendNode('file', [url: 'PROJECT', charset: charsetEncoding])
+            }
+        }
+    }
+}
+
+//------------------------------------------------------
